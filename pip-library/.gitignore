@@ -1,0 +1,7 @@
+thesaurus/back_embeds/*
+build/*
+dist/*
+en_core_web_md-3.0.0/*
+thesaurus.egg-info/*
+thesaurus_lib.egg-info/*
+en_core_web_md_temporary
