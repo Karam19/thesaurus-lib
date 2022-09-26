@@ -11,5 +11,8 @@ requires =[
     'sentence-transformers',
     'importlib_resources',
     "wheel",
+    'pymorphy2',
+    'configparser',
+    'wget',
 ]
 build-backend = "setuptools.build_meta"

@@ -11,6 +11,8 @@ from collections import Counter
 from .downloads import make_downloads
 from nltk.stem.isri import ISRIStemmer
 from sentence_transformers import SentenceTransformer
+import configparser
+import wget
 
 try:
     import importlib.resources as pkg_resources
@@ -23,62 +25,50 @@ output_notebook()
 MAX_LENGTH = 50000000
 LEMMATIZATION_THRESHOLD = 500000
 
-models = {'eng': 'en_core_web_md-3.0.0/en_core_web_md/en_core_web_md-3.0.0',
-          'fra': 'fr_core_news_md-3.3.0/fr_core_news_md/fr_core_news_md-3.3.0',
-          'deu': 'de_core_news_md',
-          'ara': './spacy.aravec.model/',
-          'rus': 'ru_core_news_md'}
-back_embeds = {'eng': 'coca_embeds.pickle',
-               'fra': 'fra_embeds.pickle',
-               'deu': 'deu_embeds.pickle',
-               'ara': 'ara_embeds.pickle',
-               'rus': 'ru_embeds.pickle'}
-back_tokens = {'eng': 'coca_tokens.pickle',
-               'fra': 'fra_tokens.pickle',
-               'deu': 'deu_tokens.pickle',
-               'ara': 'ara_tokens.pickle',
-               'rus': 'ru_tokens.pickle'}
-index_files = {'eng': 'index_eng.pickle',
-               'fra': 'index_fra.pickle',
-               'deu': 'index_deu.pickle',
-               'ara': 'index_ara.pickle',
-               'rus': 'index_ru.pickle'}
-
 
 class Thesaurus:
-    def __init__(self, lang):
+    def __init__(self, lang, user_config=None):
         self.spacy_model = None
         self.som = None
         self.fig = None
         self.model = None
+        self.user_config = {}
         self.embed_model = SentenceTransformer('sentence-transformers/paraphrase-multilingual-mpnet-base-v2')
         self.lang = lang
         self.external_background = False
-        if lang == 'eng':
-            self.STOPWORDS_FILE = 'extended_stopwords_en.txt'
-            self.embeddings_file = 'embeddings_eng.pickle'
-            self.som_file = 'som_eng.pickle'
-        elif lang == 'fra':
-            self.STOPWORDS_FILE = 'extended_stopwords_fr.txt'
-            self.embeddings_file = 'embeddings_fra.pickle'
-            self.som_file = 'som_fra.pickle'
-        elif lang == 'deu':
-            self.STOPWORDS_FILE = 'extended_stopwords_deu.txt'
-            self.embeddings_file = 'embeddings_deu.pickle'
-            self.som_file = 'som_deu.pickle'
-        elif lang == 'ara':
-            self.STOPWORDS_FILE = 'extended_stopwords_ara.txt'
-            self.embeddings_file = 'embeddings_ara.pickle'
-            self.som_file = 'som_ara.pickle'
-        elif lang == 'rus':
-            self.STOPWORDS_FILE = 'extended_stopwords_ru.txt'
-            self.embeddings_file = 'embeddings_ru.pickle'
-            self.som_file = 'som_ru.pickle'
+        if lang == 'eng' or lang == 'rus':
+            config = configparser.RawConfigParser()
+            conf_file = pkg_resources.read_text('thesaurus_lib', 'config.cfg')
+            config.read_string(conf_file)
+            self.config = dict(config.items(lang))
+            self.paths = dict(config.items('paths'))
+            if user_config is not None:
+                config.read(user_config)
+                self.user_config = dict(config.items(lang))
         else:
-            raise SyntaxError("Please choose one of the following languages: ['eng, 'fra', 'deu', 'ara', 'rus'] ")
+            raise SyntaxError("Please choose one of the following languages: ['eng', 'rus'] ")
+        # download spacy model
         make_downloads(lang)
+        # download pretrained model
+        self.download('som_file', 'som_url')
+        # download background embeddings
+        self.download('back_embeds', 'embeds_url')
         self.set_spacy_model()
         self.set_som()
+        if 'back_embeds' in self.user_config and 'back_tokens' in self.user_config:
+            self.background_embeds, self.background_words = self.import_background(
+                b_tokens=self.user_config['back_tokens'], b_embeds=self.user_config['back_embeds'])
+        else:
+            self.background_embeds, self.background_words = self.import_background()
+
+    def download(self, file_key, url_key):
+        if file_key in self.user_config:
+            pass
+        if url_key in self.user_config:
+            url = self.user_config[url_key]
+        else:
+            url = self.config[url_key]
+        wget.download(url)
 
     @staticmethod
     def read_text(file):
@@ -88,13 +78,10 @@ class Thesaurus:
             lines.append(line)
         return ''.join(lines)
 
-    def set_spacy_model(self, model=None):
-        if model is None:
-            model = models[self.lang]
+    def set_spacy_model(self):
+        model = self.user_config['model'] if 'model' in self.user_config else self.config['model']
         self.spacy_model = spacy.load(model)
         self.spacy_model.max_length = MAX_LENGTH
-        if self.lang == 'ara':
-            self.spacy_model.tokenizer = Preprocessor(self.spacy_model.tokenizer)
 
     def get_nes(self, text):
         doc = self.spacy_model(text)
@@ -125,15 +112,15 @@ class Thesaurus:
         return tokens
 
     @staticmethod
-    def get_stopwords(path_):
-        stopwords_file = pkg_resources.read_text("thesaurus_lib.data.stopwords", path_)
+    def get_stopwords(path_, file_):
+        stopwords_file = pkg_resources.read_text(path_, file_)
         stopwords = []
         for line in stopwords_file:
             stopwords.append(line[:-1])
         return stopwords
 
     def remove_stopwords(self, tokens: list):
-        stopwords = self.get_stopwords(self.STOPWORDS_FILE)
+        stopwords = self.get_stopwords(self.paths['stopwords_path'], self.config['stopwords_file'])
         filtered_tokens = []
         for token in tokens:
             if token not in stopwords:
@@ -153,7 +140,7 @@ class Thesaurus:
         return result
 
     def make_embeddings(self, tokens: list) -> list:
-        embeddings_filename = self.embeddings_file
+        embeddings_filename = self.config['embeddings_file']
         if os.path.exists(embeddings_filename):
             # print('Found cache..')
             embeddings_file = open(embeddings_filename, 'rb')
@@ -191,13 +178,13 @@ class Thesaurus:
         neurons_num = 5 * np.sqrt(n)
         return int(np.ceil(np.sqrt(neurons_num)))
 
-    def set_som(self, local_som_file=None):
-        if local_som_file is None:
-            som = pkg_resources.read_binary("thesaurus_lib.data.pretrained_models", self.som_file)
-            som = pickle.loads(som)
-        else:
-            model = open(local_som_file, 'rb')
+    def set_som(self):
+        if 'som_file' not in self.user_config:
+            model = open(self.config['som_file'], 'rb')
             som = pickle.load(model)
+        else:
+            som = open(self.user_config['som_file'], 'rb')
+            som = pickle.load(som)
         self.model = som
 
     def plot_bokeh(self, background_embeds, background_words, foreground_names, preprocessed_foregrounds,
@@ -219,12 +206,12 @@ class Thesaurus:
         # print(plot_size)
 
         som = self.model
-        if os.path.isfile(index_files[self.lang]) or self.external_background is False:
+        if os.path.isfile(self.config['index_file']) or self.external_background is False:
             if self.external_background is False:
-                index = pkg_resources.read_binary("thesaurus_lib.data.index_files", index_files[self.lang])
+                index = pkg_resources.read_binary(self.paths['index_path'], self.config['index_file'])
                 index = pickle.loads(index)
             else:
-                with open(index_files[self.lang], 'rb') as index_file:
+                with open(self.config['index_file'], 'rb') as index_file:
                     index = pickle.load(index_file)
 
             b_label = []
@@ -254,7 +241,7 @@ class Thesaurus:
                 b_weight_y.append(wy)
                 b_label.append(background_words[cnt])
 
-            with open(index_files[self.lang], 'wb') as index_file:
+            with open(self.config['index_file'], 'wb') as index_file:
                 pickle.dump(index, index_file)
 
         # translations = [(-0.15, -0.15), (0.15, 0.15), (-0.15, 0.15)]
@@ -448,9 +435,9 @@ class Thesaurus:
     def import_background(self, b_tokens=None, b_embeds=None):
         background_embeds, background_words = None, None
         if b_tokens is None and b_embeds is None:
-            background_words = pkg_resources.read_binary("thesaurus_lib.data.back_tokens", back_tokens[self.lang])
-            background_embeds = pkg_resources.read_binary("thesaurus_lib.data.back_embeds", back_embeds[self.lang])
-            background_words, background_embeds = pickle.loads(background_words), pickle.loads(background_embeds)
+            background_words = pkg_resources.read_binary(self.paths['back_tokens_path'], self.config['back_tokens'])
+            background_embeds = open(self.config['back_embeds'], 'rb')
+            background_words, background_embeds = pickle.loads(background_words), pickle.load(background_embeds)
         else:
             tokens = open(b_tokens, 'rb')
             if b_tokens.lower().endswith('.pickle'):
@@ -461,8 +448,8 @@ class Thesaurus:
 
         return background_embeds, background_words
 
-    def show_map(self, background_embeds, background_words, foreground_names, processed_foregrounds):
-        fig, som = self.plot_bokeh(background_embeds, background_words, foreground_names, processed_foregrounds, )
+    def show_map(self, foreground_names, processed_foregrounds):
+        fig, som = self.plot_bokeh(self.background_embeds, self.background_words, foreground_names, processed_foregrounds, )
         self.som = som
         self.fig = fig
         show(fig)

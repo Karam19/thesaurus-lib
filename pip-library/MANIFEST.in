@@ -1,3 +1,4 @@
 include pyproject.toml
 recursive-include thesaurus_lib *.pickle
 recursive-include thesaurus_lib *.txt
+recursive-include thesaurus_lib config.cfg
