@@ -68,7 +68,8 @@ class Thesaurus:
             url = self.user_config[url_key]
         else:
             url = self.config[url_key]
-        wget.download(url)
+        if not os.path.isfile(self.config[file_key]):
+            wget.download(url)
 
     @staticmethod
     def read_text(file):
@@ -421,10 +422,10 @@ class Thesaurus:
 
         return res
 
-    def process_foreground(self, foreground_names, texts):
+    def process_foreground(self, texts):
         processed_foregrounds = dict()
 
-        for foreground_unit in tqdm(foreground_names):
+        for foreground_unit in tqdm(list(texts.keys())):
             all_embeddings_of_unit, all_words_of_unit = self.process_texts(texts[foreground_unit])
 
             one_processed_foreground = {'embeds': all_embeddings_of_unit, 'words': all_words_of_unit}
@@ -448,8 +449,9 @@ class Thesaurus:
 
         return background_embeds, background_words
 
-    def show_map(self, foreground_names, processed_foregrounds):
-        fig, som = self.plot_bokeh(self.background_embeds, self.background_words, foreground_names, processed_foregrounds, )
+    def show_map(self, processed_foregrounds):
+        fig, som = self.plot_bokeh(self.background_embeds, self.background_words,
+                                   list(processed_foregrounds.keys()), processed_foregrounds, )
         self.som = som
         self.fig = fig
         show(fig)
