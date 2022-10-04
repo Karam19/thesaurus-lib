@@ -189,7 +189,7 @@ class Thesaurus:
         self.model = som
 
     def plot_bokeh(self, background_embeds, background_words, foreground_names, preprocessed_foregrounds,
-                   background_color='#d2e4f5', foreground_colors=None):
+                   background_color='#d2e4f5', foreground_colors=None, hexagon_size=10, grid_size=100 ):
 
         """
         foreground_names ['foreground_name1', ...]
@@ -199,9 +199,9 @@ class Thesaurus:
             foreground_colors = ['#f5a09a', 'green', '#f5b19a', '#f5d59a', '#ebe428',
                                  '#28ebd1', '#1996b3', '#0b2575', '#2d0a5e', '#4d0545']
 
-        hexagon_size = 10
+        # hexagon_size = 10
+        # grid_size = 100
         dot_size = 4
-        grid_size = 100
 
         plot_size = int(hexagon_size * grid_size * 1.5)
         # print(plot_size)
@@ -399,6 +399,22 @@ class Thesaurus:
             # print(oov_words)
 
         return all_embeddings, all_words
+
+    def process_default_foregrounds(self):
+        text1 = pkg_resources.read_binary(self.paths['foregrounds_path'], self.config['default_foregrounds_1'])
+        text2 = pkg_resources.read_binary(self.paths['foregrounds_path'], self.config['default_foregrounds_2'])
+        text1, text2 = pickle.loads(text1), pickle.loads(text2)
+        texts = dict()
+
+        foreground_name1 = self.config['default_foregrounds_1_title']
+        texts[foreground_name1] = self.custom_preprocessing_of_data(text1)
+
+        foreground_name2 = self.config['default_foregrounds_2_title']
+        texts[foreground_name2] = [text2]
+
+        processed_foregrounds = self.process_foreground(texts)
+
+        return processed_foregrounds
 
     @staticmethod
     def read_txt(file_name):
