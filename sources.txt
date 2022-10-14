@@ -1,0 +1,15 @@
+'fra'
+French corpus (leipzig university): https://pcai056.informatik.uni-leipzig.de/downloads/corpora/fra_mixed_2009_30K.tar.gz
+descartes.txt: https://www.gutenberg.org/ebooks/13846
+covid19.txt: https://www.ouest-france.fr/sante/virus/coronavirus/covid-19-la-contamination-reprend-deux-infectiologues-veulent-une-relance-de-la-vaccination-c7bc3c08-e3f6-11ec-a695-df7df0a2b6df#:~:text=Covid%2D19.-,%C2%AB%20La%20contamination%20reprend%20%C2%BB%20%3A%20deux%20infectiologues%20veulent%20une%20relance%20de,nouvelle%20vague%20%C3%A0%20l'automne.
+
+'rus'
+Russian corpus (leipzig university): https://pcai056.informatik.uni-leipzig.de/downloads/corpora/rus-ru_web-public_2019_30K.tar.gz
+Idiot.txt: https://linguabooster.com/en/ru/book/download/idiot
+King.txt: https://narodstory.net/skazki-grimm.php?id=38
+
+'deu'
+German corpus (leipzig university): https://pcai056.informatik.uni-leipzig.de/downloads/corpora/deu_news_2021_30K.tar.gz
+berlin.txt: https://archive.org/stream/AlfredDoblin.BerlinAlexanderplatz/Alfred%20Doblin.%20Berlin%20Alexanderplatz_djvu.txt
+machine.txt: https://link.springer.com/article/10.1365/s40702-018-0404-z
+

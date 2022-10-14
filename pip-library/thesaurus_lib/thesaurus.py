@@ -189,7 +189,7 @@ class Thesaurus:
         self.model = som
 
     def plot_bokeh(self, background_embeds, background_words, foreground_names, preprocessed_foregrounds,
-                   background_color='#d2e4f5', foreground_colors=None, hexagon_size=10, grid_size=100 ):
+                   hexagon_size, grid_size, background_color='#d2e4f5', foreground_colors=None):
 
         """
         foreground_names ['foreground_name1', ...]
@@ -401,13 +401,12 @@ class Thesaurus:
         return all_embeddings, all_words
 
     def process_default_foregrounds(self):
-        text1 = pkg_resources.read_binary(self.paths['foregrounds_path'], self.config['default_foregrounds_1'])
-        text2 = pkg_resources.read_binary(self.paths['foregrounds_path'], self.config['default_foregrounds_2'])
-        text1, text2 = pickle.loads(text1), pickle.loads(text2)
+        text1 = pkg_resources.read_text(self.paths['foregrounds_path'], self.config['default_foregrounds_1'])
+        text2 = pkg_resources.read_text(self.paths['foregrounds_path'], self.config['default_foregrounds_2'])
         texts = dict()
 
         foreground_name1 = self.config['default_foregrounds_1_title']
-        texts[foreground_name1] = self.custom_preprocessing_of_data(text1)
+        texts[foreground_name1] = [text1]
 
         foreground_name2 = self.config['default_foregrounds_2_title']
         texts[foreground_name2] = [text2]
@@ -465,9 +464,11 @@ class Thesaurus:
 
         return background_embeds, background_words
 
-    def show_map(self, processed_foregrounds):
+    def show_map(self, processed_foregrounds=None, hexagon_size=15, grid_size=70):
+        if processed_foregrounds is None:
+            processed_foregrounds = self.process_default_foregrounds()
         fig, som = self.plot_bokeh(self.background_embeds, self.background_words,
-                                   list(processed_foregrounds.keys()), processed_foregrounds, )
+                                   list(processed_foregrounds.keys()), processed_foregrounds, hexagon_size, grid_size)
         self.som = som
         self.fig = fig
         show(fig)
