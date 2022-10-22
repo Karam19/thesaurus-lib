@@ -1,87 +1,84 @@
 # Thesaurus Visualization
 
-## Current available notebooks
-``ThesaurusVisualization.ipynb`` Is a demo on how to use the library (English language)
+Current supported languages are:
 
-``Tutorial.ipynb`` Shows how to train the model
+- English ``eng``
+- Russian ``rus``
 
-``MultiLang.ipynb`` Multi languages demo (French, German, Russian and Arabic)
-
-``back.ipynb`` Shows how to prepare and process the data for training
-## How to install and run
-Install the requirements:
-
+## How to run
+### Minimalistic way
+Install the library:
 ```
-pip install -r requirements.txt
+pip install thesaurus-lib
 ```
-
-cd into source directory:
-
-```
-%cd source
-```
-
-Import the library:
-
-```
-from thesaurus import Thesaurus
-```
-
 Create an object and specify the language:
 
 ```
 obj = Thesaurus(lang='eng')
 ```
-
-Current supported languages are:
-
-- English ``eng``
-- French ``fra``
-- German ``deu``
-- Arabic ``ara``
-- Russian ``ru``
-
-Chose one or more files to process as a foreground:
+Show output:
 
 ```
-text1 = obj.read_txt('../data/texts/covid19.txt')
-text2 = obj.read_txt('../data/texts/descartes.txt') 
+obj.show_map()
 ```
+### Run with your own foregrounds:
+After you install the library and create the object do the following
+
+1. pass them to the library:
+
+```
+text1 = obj.read_pickle('2017')
+text2 = obj.read_txt('shakespeare.txt')
+text3 = obj.read_text('My foreground in string format')
+```
+2. Preprocess your foreground:
+
 ```
 texts = dict()
-
-foreground_names = []
-
-foreground_name1 = 'Covid 19'
-texts[foreground_name1] = [text1]
-foreground_names.append(foreground_name1)
-
-foreground_name2 = 'Discours de la méthode, René Descartes'
-texts[foreground_name2] = [text2]
-foreground_names.append(foreground_name2)
+foreground_name = 'Physics articles 2017'
+texts[foreground_name] = obj.custom_preprocessing_of_data(text1)
 ```
+3. Process foregrounds:
+
 ```
 processed_foregrounds = obj.process_foreground(foreground_names, texts)
 ```
-Import the background files:
-```
-background_embeds, background_words = obj.import_background()
-```
-Note: If embeddings aren't available for the background then they will be auto generated
-
-Visualize the texts:
-```
-print("Go to https://nbviewer.org/github/DinarZayahov/thesaurus/blob/master/ThesaurusVisualization.ipynb 
-       to see the outputs of the notebook as the GitHub doesn't render dynamic output")
-obj.show_map(background_embeds, background_words, foreground_names, processed_foregrounds)
-```
-## Download embeddings on Colab:
-
-After you change directory to '/source' in google colab run the current cell,
-this cell downloads the files into their folders:
+4. Show output:
 
 ```
-!gdown 1pJnTdw5qyitFNVC_FLfmjhNdEBk0fH0N -O ../data/back_embeds/
-!gdown 1BLHIb82kTFuSzkyEbe1f044UGojXuhV8 -O ../data/back_embeds/
-!gdown 1WrU9i5BiCckDebYAcOZu83ZL1UD9kvM2 -O ../data/back_embeds/
+obj.show_map()
+```
+
+### Use your own configurations
+
+After installing the library create a file called 'config.cfg' in your working
+directory and fill the value with your own files:
+
+```
+[paths]
+som_path =
+index_path =
+back_tokens_path =
+back_embeds_path =
+stopwords_path =
+foregrounds_path =
+
+    [lang]
+    som_url =
+    embeds_url =
+    som_file =
+    index_file =
+    back_tokens =
+    back_embeds =
+    embeddings_file =
+    STOPWORDS_FILE =
+    model =
+```
+
+Note: Don't leave any empty field in config.cfg. For example if you aren't providing a som_file
+then delete it in your config.cfg and don't keep it in this way:
+
+```
+# fill it or delete it
+som_file =
 ```
